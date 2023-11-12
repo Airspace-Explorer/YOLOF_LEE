@@ -1,5 +1,5 @@
 from utils import get_model
-from mmdet.apis import inference_detector, show_result_pyplot
+from mmdet.apis import inference_detector
 import glob
 import pandas as pd 
 import os
@@ -7,6 +7,10 @@ from tqdm import tqdm
 import mmcv
 from mmcv import imread
 import numpy as np
+from shutil import copyfile
+import cv2
+import matplotlib
+matplotlib.use('Agg')
 weights_path = '/data/operati123/yolo/model/epoch_45.pth'
 config_file_path='./yolo_config_test.py'
 model=get_model(config_file_path,weights_path)
@@ -18,7 +22,11 @@ results = {
     'file_name':[], 'class_id':[], 'confidence':[], 'point1_x':[], 'point1_y':[],
     'point2_x':[], 'point2_y':[], 'point3_x':[], 'point3_y':[], 'point4_x':[], 'point4_y':[]
 }
-score_threshold = 0.4
+score_threshold = 0.1
+
+save_image_directory = '/data/operati123/yolo/test_image'
+
+
 for index, img_path in tqdm(enumerate(test_file), total = len(test_file)):
 
     file_name = img_path.split("/")[-1].split(".")[0]+".json"
@@ -48,6 +56,15 @@ for index, img_path in tqdm(enumerate(test_file), total = len(test_file)):
 
         for label, score, bbox in zip(labels, scores, boxes):
             x_min, y_min, x_max, y_max = bbox.astype(np.int64)
+            
+            img_result = img.copy()
+            points = np.array([[x_min, y_min], [x_max, y_min], [x_max, y_max], [x_min, y_max]], np.int32)
+            points = points.reshape((-1, 1, 2))
+            img_result = cv2.polylines(img_result, [points], isClosed=True, color=(0, 0, 255), thickness=5)
+            class_name = f"Class: {label}"  # Assuming label is the class identifier
+            cv2.putText(img_result, class_name, (x_min, y_min - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+            save_image_path = os.path.join(save_image_directory, f"{file_name.split('.')[0]}_result.jpg")
+            mmcv.imwrite(img_result, save_image_path)
 
             results['file_name'].append(file_name)
             results['class_id'].append(label)
@@ -60,6 +77,7 @@ for index, img_path in tqdm(enumerate(test_file), total = len(test_file)):
             results['point3_y'].append(y_max)
             results['point4_x'].append(x_min)
             results['point4_y'].append(y_max)
+        
 
 submission = pd.DataFrame(results)
 save_path = '/data/operati123/yolo/submission.csv'
