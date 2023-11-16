@@ -11,10 +11,10 @@ from shutil import copyfile
 import cv2
 import matplotlib
 matplotlib.use('Agg')
-weights_path = '/data/operati123/yolo/model/epoch_45.pth'
+weights_path = '/data/operati123/yolo/model/epoch_15.pth'
 config_file_path='./yolo_config_test.py'
 model=get_model(config_file_path,weights_path)
-
+class_names = ['Bird', 'Airplane', 'Helicopter', 'FighterPlane', 'Paragliding', 'Drone']
 test_directory = '/local_datasets/Test2'
 test_file = glob.glob(os.path.join(test_directory, '*.jpg'))
 
@@ -22,7 +22,7 @@ results = {
     'file_name':[], 'class_id':[], 'confidence':[], 'point1_x':[], 'point1_y':[],
     'point2_x':[], 'point2_y':[], 'point3_x':[], 'point3_y':[], 'point4_x':[], 'point4_y':[]
 }
-score_threshold = 0.1
+score_threshold = 0.15
 
 save_image_directory = '/data/operati123/yolo/test_image'
 
@@ -41,12 +41,12 @@ for index, img_path in tqdm(enumerate(test_file), total = len(test_file)):
             if len(labels)==0:
                 boxes = np.array(cls_result[:, :4])
                 scores = np.array(cls_result[:, 4])
-                labels = np.array([k+1]*len(cls_result[:, 4]))
+                labels = np.array([k]*len(cls_result[:, 4]))
             else:
                 boxes = np.concatenate((boxes, np.array(cls_result[:, :4])))
                 scores = np.concatenate((scores, np.array(cls_result[:, 4])))
-                labels = np.concatenate((labels, [k+1]*len(cls_result[:, 4])))
-
+                labels = np.concatenate((labels, [k]*len(cls_result[:, 4])))
+    
     if len(labels) != 0:
         indexes = np.where(scores > score_threshold)
         # print(indexes)
@@ -57,14 +57,14 @@ for index, img_path in tqdm(enumerate(test_file), total = len(test_file)):
         for label, score, bbox in zip(labels, scores, boxes):
             x_min, y_min, x_max, y_max = bbox.astype(np.int64)
             
-            img_result = img.copy()
             points = np.array([[x_min, y_min], [x_max, y_min], [x_max, y_max], [x_min, y_max]], np.int32)
             points = points.reshape((-1, 1, 2))
-            img_result = cv2.polylines(img_result, [points], isClosed=True, color=(0, 0, 255), thickness=5)
-            class_name = f"Class: {label}"  # Assuming label is the class identifier
-            cv2.putText(img_result, class_name, (x_min, y_min - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+            img= cv2.polylines(img, [points], isClosed=True, color=(0, 0, 255), thickness=3)
+            class_name = class_names[label]  # Assuming label is the class identifier
+            text = f"Class: {class_name}, Confidence: {score:.2f}"
+            cv2.putText(img, text, (x_min, y_min - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
             save_image_path = os.path.join(save_image_directory, f"{file_name.split('.')[0]}_result.jpg")
-            mmcv.imwrite(img_result, save_image_path)
+            mmcv.imwrite(img, save_image_path)
 
             results['file_name'].append(file_name)
             results['class_id'].append(label)
