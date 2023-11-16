@@ -1,0 +1,5 @@
+MMDET:
+  CFG: "./yolo_config_test.py"
+  CHECKPOINT: "./epoch_15.pth"
+
+  SCORE_THRESH: 0.1
