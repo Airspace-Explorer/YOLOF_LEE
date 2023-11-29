@@ -18,3 +18,5 @@ for i in range(frame_count):
 
 # 동영상 파일 닫기
 video.release()
+
+
